@@ -8,12 +8,13 @@ modüler (üzerine eklene eklene büyüyen) bir yapay zeka sistemi.
 
 | Özellik | Açıklama |
 |---|---|
-| Sesli kontrol | Uyandırma kelimesi veya kısayol tuşuyla konuşarak komut verme, sesli cevap |
+| Çift giriş: yazı + ses | Her komut hem yazılı mesajla hem konuşarak verilebilir; ikisi aynı çekirdeğe gider, aynı sonucu verir |
+| Sesli kontrol | Kısayol tuşuyla (bas-konuş) konuşarak komut verme, sesli cevap (uyandırma kelimesi sonra) |
 | Sohbet / yazı | Senaryo, başlık, prompt listesi üretimi — internetsiz |
 | Toplu görsel | Tek komutla yüzlerce görseli sıraya alıp numaralı şekilde proje klasörüne üretme |
 | Karakter tutarlılığı | Karakter kütüphanesi: LoRA + referans görsel ile her görselde aynı karakter |
 | Çoklu stil | Gerçekçi ve çizim/stilize stiller; proje başına stil profili |
-| Video | Gerekli sahneler bilgisayardaki **Grok bot** ile üretilir (yerel Wan 2.2 yedek seçenek) |
+| Video | Gerekli sahneler bilgisayardaki **Grok bot** ile **webhook** üzerinden üretilir (yerel Wan 2.2 yedek seçenek) |
 | Masaüstü entegrasyonu | Uygulama açma, dosya/klasör işlemleri, diğer programlarla köprüler |
 | Genişletilebilirlik | Her yetenek ayrı bir "araç" dosyası; yeni araç = yeni dosya |
 
@@ -58,14 +59,14 @@ modüler (üzerine eklene eklene büyüyen) bir yapay zeka sistemi.
 | Çekirdek sunucu | FastAPI (localhost) | Arayüz ve araçlar bununla konuşur |
 | Dil modeli | Ollama + Qwen3 14B (Q4) | Araç çağırma (tool calling) destekli, Türkçe iyi; alternatif Gemma 3 12B |
 | Konuşma → yazı | faster-whisper, large-v3-turbo | CPU'da çalışır, VRAM harcamaz |
-| Uyandırma kelimesi | openWakeWord | + bas-konuş kısayol tuşu |
+| Bas-konuş | Global kısayol tuşu | Uyandırma kelimesi (openWakeWord) şimdilik yok, sonra eklenebilir |
 | Yazı → konuşma | Piper (TR), Kokoro (EN) | CPU |
 | Görsel motoru | ComfyUI (API modu) | Workflow'lar JSON olarak depoda tutulur |
 | Ana görsel modeli | Flux.1 dev + Nunchaku FP4 | Gerçekçi ve genel kullanım |
 | Stilize / hızlı | SDXL tabanlı modeller (+ stil LoRA'ları) | Çizim stilleri, hızlı taslak |
 | Referans düzenleme | Flux Kontext dev, Qwen-Image-Edit | Eğitimsiz karakter tutarlılığı |
 | LoRA eğitimi | AI-Toolkit (veya FluxGym) | Karakter başına tek seferlik |
-| Video | Grok bot köprüsü; yedek: Wan 2.2 (GGUF + hızlandırma LoRA) | |
+| Video | Grok bot webhook köprüsü; yedek: Wan 2.2 (GGUF + hızlandırma LoRA) | |
 | Masaüstü otomasyonu | pywinauto, subprocess, watchdog | |
 | Arayüz | pystray (tepsi) + yerel web arayüzü | |
 | Ayarlar | YAML dosyaları | Stil profilleri, karakterler, kısayollar |
@@ -90,12 +91,12 @@ Yapay-zeka/
 │   ├── is_kuyrugu.py        # Uzun işler (toplu üretim) kuyruğu
 │   └── arac_yukleyici.py    # araclar/ klasörünü otomatik yükler
 ├── ses/
-│   ├── kulak.py             # Whisper + uyandırma kelimesi
+│   ├── kulak.py             # Whisper + bas-konuş
 │   └── agiz.py              # Piper / Kokoro
 ├── araclar/                 # ← üzerine eklenen her yetenek burada
 │   ├── ressam.py            # Tek / toplu görsel üretimi
 │   ├── karakter.py          # Karakter kütüphanesi, LoRA eğitimi
-│   ├── yonetmen.py          # Grok bot köprüsü + yerel Wan
+│   ├── yonetmen.py          # Grok bot webhook köprüsü + yerel Wan
 │   ├── dosya.py             # Klasör/dosya işlemleri
 │   ├── uygulama.py          # Uygulama açma/kontrol
 │   └── yazar.py             # Senaryodan prompt listesi çıkarma
@@ -108,10 +109,11 @@ Yapay-zeka/
 └── testler/
 ```
 
-Video projeleri depo dışında, ayarlanabilir bir klasörde tutulur:
+Video projeleri depo dışında, **Masaüstündeki proje klasöründe** tutulur (klasör adı
+`ayarlar/genel.yaml` içinden değiştirilebilir, varsayılan `Masaüstü\Projeler`):
 
 ```
-D:\Projeler\<proje-adı>\
+%USERPROFILE%\Desktop\Projeler\<proje-adı>\
 ├── proje.yaml               # stil profili, karakterler, çözünürlük
 ├── senaryo.txt
 ├── promptlar.txt            # her satır bir görsel
@@ -128,13 +130,16 @@ Her aşama sonunda kullanılabilir bir sistem olur.
 - Kurulum scriptleri (Python, Ollama, Qwen3 14B)
 - Çekirdek sunucu, araç yükleyici, araç çağırma döngüsü
 - İlk basit araçlar: `dosya` (klasör oluştur, listele), `uygulama` (program aç)
-- Yazılı sohbet arayüzü
+- Yazılı sohbet arayüzü (mesaj yazarak tüm komutlar)
+- Masaüstünde proje klasörünün kurulumu
 - **Bitti sayılır:** "Masaüstünde Deneme adında klasör aç" yazınca klasör oluşur.
 
 ### Aşama 2 — Ses
-- Kulak (Whisper, CPU) + bas-konuş kısayolu + uyandırma kelimesi
+- Kulak (Whisper, CPU) + bas-konuş kısayolu
+- Ses ve yazı aynı sohbet penceresinde: konuşulan komut yazıya dökülüp mesaj olarak görünür
 - Ağız (Piper Türkçe)
-- **Bitti sayılır:** Konuşarak verilen komut çalışır ve sesli cevap gelir.
+- Ayar: cevaplar sesli mi, yazılı mı, ikisi birden mi
+- **Bitti sayılır:** Aynı komut yazarak da konuşarak da çalışır; sesli cevap gelir.
 
 ### Aşama 3 — Ressam (görsel üretimi)
 - ComfyUI kurulumu (RTX 50 uyumlu), Flux dev + Nunchaku FP4, SDXL
@@ -143,7 +148,7 @@ Her aşama sonunda kullanılabilir bir sistem olur.
 - Yeniden üretim: "37 ve 112'yi yeniden üret"
 - Stil profilleri (gerçekçi / çizim)
 - Hız ölçümü (hedef: Flux ile 500 görsel ≈ 1 saat)
-- **Bitti sayılır:** Sesli komutla 500 satırlık prompt listesi sorunsuz üretilir.
+- **Bitti sayılır:** Yazılı veya sesli komutla 500 satırlık prompt listesi sorunsuz üretilir.
 
 ### Aşama 4 — Karakter tutarlılığı
 - Karakter kütüphanesi (`ayarlar/karakterler/`)
@@ -158,7 +163,13 @@ Her aşama sonunda kullanılabilir bir sistem olur.
 - **Bitti sayılır:** "Bu senaryodan görselleri çıkar ve üret" tek komutla çalışır.
 
 ### Aşama 6 — Yönetmen (video)
-- **Grok bot köprüsü:** Grok bot'a sahne/prompt gönderme, çıkan videoyu proje klasörüne alma
+- **Grok bot webhook köprüsü:**
+  - Gönderim: çekirdek, Grok bot'un webhook adresine `POST` atar
+    (proje, sahne no, prompt, varsa başlangıç görselinin yolu, geri dönüş adresi)
+  - Dönüş: Grok bot video hazır olunca çekirdeğin `/webhook/grok` adresine bildirir;
+    video proje klasörünün `videolar\` bölümüne kaydedilir ve size haber verilir
+  - Toplu gönderim, zaman aşımı ve tekrar deneme
+  - Webhook adresi ve gizli anahtar `ayarlar/genel.yaml` içinde
 - Yedek: yerel Wan 2.2 ile görselden kısa klip (~2–5 dk / 5 sn)
 - **Bitti sayılır:** "12. sahneyi videoya çevir" komutu videoyu `videolar\` klasörüne getirir.
 
@@ -206,12 +217,16 @@ Aşama 3'te gerçek ölçümlerle güncellenecek.
 | VRAM yetersizliği | GPU sırası, FP4/GGUF sıkıştırma |
 | Toplu üretimde yarıda kesilme | Kuyruk kaldığı yerden devam eder, `kayit.log` |
 | Türkçe ses tanıma hataları | Komut onayı ("15. sahne mi dediniz?"), özel kelime listesi |
-| Grok bot'un yapısının bilinmemesi | Aşama 6 öncesi netleştirilecek (aşağıda) |
+| Grok bot webhook formatının netleşmemesi | Aşama 6 öncesi alan adları ve dönüş yöntemi netleştirilecek |
 
-## 11. Açık sorular
+## 11. Kararlar
 
-1. **Grok bot nasıl çalışıyor?** Kendi yazdığınız bir script mi, hazır bir program mı?
-   Nasıl girdi alıyor (klasör, komut satırı, arayüz) ve videoyu nereye kaydediyor?
-   Köprüyü buna göre yazacağız. (Aşama 6'ya kadar zaman var.)
-2. **Projeler hangi diskte tutulsun?** (Örn. `D:\Projeler`)
-3. **Uyandırma kelimesi** ne olsun?
+- Giriş: **yazılı mesaj + ses** (ikisi de her komut için geçerli)
+- Video: **Grok bot, webhook ile**
+- Proje klasörü: **Masaüstünde** (`Masaüstü\Projeler`, değiştirilebilir)
+- Uyandırma kelimesi: **şimdilik yok** — bas-konuş kısayolu kullanılır
+
+## 12. Açık sorular (acil değil)
+
+1. **Grok bot webhook ayrıntıları** (Aşama 6 öncesi): webhook adresi, beklediği alanlar,
+   videoyu nasıl döndürüyor (dosya yolu mu, indirme linki mi, kendi tarafından mı kaydediyor).
